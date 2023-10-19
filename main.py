@@ -4,7 +4,7 @@ from telebot import types
 import requests
 import json
 
-token = "5479313686:AAHi0KILJu920gjc95uFpxZxHW2zXv70RBA"
+token = "TELEGRAM BOT TOKEN"
 bot = AsyncTeleBot(token)
 
 
