@@ -1,10 +1,11 @@
+import time
 from datetime import datetime, timedelta
 from telebot.async_telebot import AsyncTeleBot
 from telebot import types
 import requests
 import json
 
-token = "TELEGRAM BOT TOKEN"
+token = "Telegram Token"
 bot = AsyncTeleBot(token)
 
 
@@ -88,7 +89,6 @@ def getScheduleForTeacher(teacherId):
         kindOfWork = lession['kindOfWork']
         dayOfWeekString = lession['dayOfWeekString']
 
-        print([dayOfWeekString,startTime,endTime,groupName,discipline,kindOfWork,auditorium])
         lessions.append({'dayOfWeekString':dayOfWeekString,'startTime':startTime,'endTime':endTime,'group':groupName,'discipline':discipline,'kindOfWork':kindOfWork,'auditorium':auditorium})
 
     return lessions
@@ -117,6 +117,9 @@ def getGroup(groupId):
 def getOutputScheduleForTeacher(schedule):
     #{'dayOfWeekString':dayOfWeekString,'startTime':startTime,'endTime':endTime,'group':groupName,'discipline':discipline,'kindOfWork':kindOfWork,'auditorium':auditorium}
 
+    if len(schedule) == 0:
+        return {'output':None,'listOutputs':[]}
+
     output = ""
     lastDay = ""
     listOutputs = []
@@ -138,8 +141,8 @@ def getOutputScheduleForTeacher(schedule):
 def getOutputScheduleForStudents(schedule):
     #{'dayOfWeekString':dayOfWeekString, 'startTime':startTime, 'endTime':endTime, 'teacher':teacher, 'discipline':discipline, 'kindOfWork':kindOfWork, 'auditorium':auditorium}
 
-    if schedule == "<b>Нет занятий!":
-        return {'output':"Нет занятий!Евсеенко Е.А",'listOutputs':None}
+    if schedule == None or schedule == "Нет занятий!":
+        return {'output':None,'listOutputs':[]}
 
     output = ""
     lastDay = ""
@@ -202,29 +205,40 @@ async def handlerMessages(message):
     if teacher != None:
         scheduleTeacher = getScheduleForTeacher(teacher)
         output = getOutputScheduleForTeacher(scheduleTeacher)
-        if len(output['output']) <= 0:
-            output = "Нет занятий!"
+        if output['output'] == None:
+            output['output'] = "Нет занятий!"
 
         if len(output['output']) < 4000:
             await bot.send_message(message.chat.id, output['output'],parse_mode="HTML",reply_markup=keyboard)
         else:
             for lession in output['listOutputs']:
-                await bot.send_message(message.chat.id, lession,reply_markup=keyboard)
+                await bot.send_message(message.chat.id, lession,reply_markup=keyboard,parse_mode="HTML")
+                time.sleep(0.2)
     elif group != None:
-        scheduleStudents = getScheduleInGroupStudents(getGroup(message.text)[2])
+        scheduleStudents = getScheduleInGroupStudents(group[2])
 
-        if len(scheduleStudents) <= 0:
+        if scheduleStudents == None or len(scheduleStudents) <= 0:
             scheduleStudents = "Нет занятий!"
+            await bot.send_message(message.chat.id, scheduleStudents, reply_markup=keyboard)
+            return
 
         output = getOutputScheduleForStudents(scheduleStudents)
+
+        if output == None or len(output['output']) <= 0:
+            output['output'] = "Нет занятий!"
+
         if len(output['output']) < 4000:
             await bot.send_message(message.chat.id,output['output'],parse_mode="HTML",reply_markup=keyboard)
         else:
             for lession in output['listOutputs']:
-                await bot.send_message(message.chat.id, lession,reply_markup=keyboard)
+                await bot.send_message(message.chat.id, lession,reply_markup=keyboard,parse_mode="HTML")
+                time.sleep(0.2)
+
     else:
         await bot.send_message(message.chat.id, "Для получения информации нужно ввести ФИО или название группы.\n"
                                                 "Пример: Евсеенко Е.А\nПример: 3ф21бу",reply_markup=keyboard)
+
+    await bot.send_message(message.chat.id, "Поиск окончен", reply_markup=keyboard, parse_mode="HTML")
 
 #Запуск бота
 import asyncio
